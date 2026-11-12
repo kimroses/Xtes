@@ -133,25 +133,28 @@ async function playVideo(item) {
     const res = await fetch(WORKER_URL + "/video?url=" + encodeURIComponent(item.detail_url));
     const json = await res.json();
 
-    if (json.status !== "success") throw new Error(json.message || "Gagal mengambil video");
+    if (json.status !== "success") throw new Error(json.message || "Gagal");
+
+    // Pakai proxy supaya tidak 403
+    const proxyUrl = WORKER_URL + "/proxy?url=" + encodeURIComponent(json.video_url);
 
     const player = document.getElementById("player");
-    player.src = json.video_url;
+    player.src = proxyUrl;
     player.load();
     player.play().catch(() => {});
 
     document.getElementById("modalInfo").innerHTML = `
       ${json.tweet_url ? `<a href="${json.tweet_url}" target="_blank">Tweet Asli</a> · ` : ""}
-      <a href="${json.video_url}" target="_blank">Download MP4</a>
+      <a href="${json.video_url}" target="_blank">Link Asli</a>
     `;
 
     document.getElementById("modal").classList.add("active");
     setStatus("Video siap diputar");
   } catch (err) {
-    setStatus("Gagal play: " + err.message, true);
+    setStatus("Gagal: " + err.message, true);
     console.error(err);
   }
-}
+    }
 
     function closeModal() {
       const player = document.getElementById("player");
