@@ -3,139 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monsnode Style Player</title>
+  <title>Monsnode Player</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0b0b0b;
-      color: #eee;
-      padding: 16px;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0b0b0b; color: #eee; padding: 16px; }
     .container { max-width: 1200px; margin: 0 auto; }
-    h1 { font-size: 1.6rem; margin-bottom: 6px; }
-    .subtitle { color: #888; margin-bottom: 20px; font-size: 0.9rem; }
-    .controls {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-    input {
-      flex: 1;
-      min-width: 180px;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px solid #333;
-      background: #1a1a1a;
-      color: white;
-      font-size: 1rem;
-    }
-    button {
-      padding: 12px 18px;
-      border-radius: 10px;
-      border: none;
-      background: #3b82f6;
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    button:hover { background: #2563eb; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    .subtitle { color: #888; margin-bottom: 18px; font-size: 0.9rem; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+    input { flex: 1; min-width: 160px; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; }
+    button { padding: 12px 16px; border-radius: 10px; border: none; background: #3b82f6; color: white; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: 0.5; }
     button.secondary { background: #333; }
-    #status {
-      margin-bottom: 16px;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: #1a1a1a;
-      display: none;
-      font-size: 0.9rem;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 14px;
-    }
-    .card {
-      background: #161616;
-      border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      border: 1px solid #2a2a2a;
-      transition: 0.15s;
-    }
-    .card:hover {
-      transform: translateY(-3px);
-      border-color: #3b82f6;
-    }
-    .card img {
-      width: 100%;
-      aspect-ratio: 9/16;
-      object-fit: cover;
-      display: block;
-      background: #111;
-    }
-    .card .label {
-      padding: 8px 10px;
-      font-size: 0.78rem;
-      color: #aaa;
-    }
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.92);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 20px;
-    }
+    #status { margin-bottom: 14px; padding: 10px 14px; border-radius: 8px; background: #1a1a1a; display: none; font-size: 0.9rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .card { background: #161616; border-radius: 12px; overflow: hidden; cursor: pointer; border: 1px solid #2a2a2a; }
+    .card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+    .card img { width: 100%; aspect-ratio: 9/16; object-fit: cover; display: block; background: #111; }
+    .card .label { padding: 8px; font-size: 0.75rem; color: #aaa; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.93); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
     .modal.active { display: flex; }
-    .modal-content {
-      position: relative;
-      width: 100%;
-      max-width: 480px;
-      background: #111;
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .modal video {
-      width: 100%;
-      max-height: 80vh;
-      display: block;
-      background: #000;
-    }
-    .modal-close {
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      border: none;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      font-size: 1.4rem;
-      cursor: pointer;
-      z-index: 10;
-    }
-    .modal-info {
-      padding: 12px 16px;
-      font-size: 0.85rem;
-      color: #ccc;
-    }
+    .modal-content { position: relative; width: 100%; max-width: 420px; background: #111; border-radius: 14px; overflow: hidden; }
+    .modal video { width: 100%; max-height: 80vh; background: #000; display: block; }
+    .modal-close { position: absolute; top: 8px; right: 10px; background: rgba(0,0,0,0.7); color: white; border: none; width: 34px; height: 34px; border-radius: 50%; font-size: 1.3rem; cursor: pointer; z-index: 10; }
+    .modal-info { padding: 12px; font-size: 0.85rem; }
     .modal-info a { color: #60a5fa; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Monsnode Style Player</h1>
-    <p class="subtitle">Klik thumbnail → langsung play video</p>
+    <h1>Monsnode Player</h1>
+    <p class="subtitle">Klik thumbnail untuk play video</p>
 
     <div class="controls">
-      <button id="btnRandom">🎲 Random</button>
-      <input type="text" id="keyword" placeholder="Cari sesuatu..." value="japanese" />
-      <button id="btnSearch">🔍 Search</button>
+      <button id="btnRandom">Random</button>
+      <input type="text" id="keyword" value="japanese" placeholder="Cari..." />
+      <button id="btnSearch">Search</button>
       <button class="secondary" id="btnClear">Clear</button>
     </div>
 
@@ -152,10 +55,10 @@
   </div>
 
   <script>
-    // ===== Konfigurasi =====
-    const PROXY = "https://api.allorigins.win/raw?url=";
+    // ====================== GANTI INI ======================
+    const WORKER_URL = "https://tetes.kimrosekim69.workers.dev";
+    // =======================================================
 
-    // ===== Fungsi Bantuan =====
     function setStatus(msg, isError = false) {
       const el = document.getElementById("status");
       el.style.display = "block";
@@ -170,113 +73,19 @@
       closeModal();
     }
 
-    async function fetchHtml(url) {
-      const res = await fetch(PROXY + encodeURIComponent(url));
-      if (!res.ok) throw new Error("Gagal mengambil data (" + res.status + ")");
-      return await res.text();
-    }
-
-    function parseList(html) {
-      const items = [];
-      const regex = /<div class="listn"[^>]*>[\s\S]*?<a href="([^"]+)"[\s\S]*?<img[^>]+src="([^"]+)"/gi;
-      let match;
-      while ((match = regex.exec(html)) !== null) {
-        items.push({
-          detail_url: match[1],
-          video_image: match[2]
-        });
-      }
-      return items;
-    }
-
-    async function getVideoUrl(detailUrl) {
-      const html = await fetchHtml(detailUrl);
-      const videoMatch = html.match(/href="(https:\/\/video\.twimg\.com\/[^"]+)"/);
-      const tweetMatch = html.match(/href="(https:\/\/(?:x|twitter)\.com\/[^"]+)"/);
-      return {
-        video_url: videoMatch ? videoMatch[1] : null,
-        tweet_url: tweetMatch ? tweetMatch[1] : null
-      };
-    }
-
-    function renderGrid(items) {
-      const grid = document.getElementById("grid");
-      grid.innerHTML = "";
-
-      items.slice(0, 24).forEach(item => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <img src="${item.video_image}" loading="lazy" alt="thumb" />
-          <div class="label">Klik untuk play</div>
-        `;
-        card.addEventListener("click", () => playVideo(item));
-        grid.appendChild(card);
-      });
-    }
-
-    async function playVideo(item) {
-      setStatus("Mengambil video, tunggu sebentar...");
-      try {
-        const data = await getVideoUrl(item.detail_url);
-        if (!data.video_url) throw new Error("Link video tidak ditemukan");
-
-        const player = document.getElementById("player");
-        const info = document.getElementById("modalInfo");
-
-        player.src = data.video_url;
-        player.load();
-        player.play().catch(() => {});
-
-        info.innerHTML = `
-          ${data.tweet_url ? `<a href="${data.tweet_url}" target="_blank">Tweet Asli</a> · ` : ""}
-          <a href="${data.video_url}" target="_blank">Download</a>
-        `;
-
-        document.getElementById("modal").classList.add("active");
-        setStatus("Video siap diputar");
-      } catch (err) {
-        setStatus("Gagal: " + err.message, true);
-      }
-    }
-
-    function closeModal() {
-      const modal = document.getElementById("modal");
-      const player = document.getElementById("player");
-      player.pause();
-      player.removeAttribute("src");
-      player.load();
-      modal.classList.remove("active");
-    }
-
-    // ===== Event Listeners =====
-    document.getElementById("btnRandom").addEventListener("click", loadRandom);
-    document.getElementById("btnSearch").addEventListener("click", loadSearch);
-    document.getElementById("btnClear").addEventListener("click", clearAll);
-    document.getElementById("btnClose").addEventListener("click", closeModal);
-
-    document.getElementById("modal").addEventListener("click", function(e) {
-      if (e.target.id === "modal") closeModal();
-    });
-
-    // ===== Fungsi Utama =====
     async function loadRandom() {
       const btn = document.getElementById("btnRandom");
       btn.disabled = true;
-      setStatus("Mengambil random video...");
+      setStatus("Mengambil random...");
 
       try {
-        const page = Math.floor(Math.random() * 30) + 1;
-        const html = await fetchHtml("https://monsnode.com/?page=" + page);
-        const items = parseList(html);
-
-        if (items.length === 0) throw new Error("Tidak ada konten ditemukan");
-
-        renderGrid(items);
-        setStatus("Berhasil memuat " + items.length + " video (halaman " + page + ")");
+        const res = await fetch(WORKER_URL + "/random");
+        const json = await res.json();
+        if (json.status !== "success") throw new Error(json.message || "Gagal");
+        renderGrid(json.data);
+        setStatus(`Berhasil load ${json.data.length} video`);
       } catch (err) {
         setStatus("Error: " + err.message, true);
-        console.error(err);
       } finally {
         btn.disabled = false;
       }
@@ -284,29 +93,85 @@
 
     async function loadSearch() {
       const keyword = document.getElementById("keyword").value.trim();
-      if (!keyword) {
-        alert("Masukkan kata kunci dulu");
-        return;
-      }
+      if (!keyword) return alert("Masukkan kata kunci");
 
       const btn = document.getElementById("btnSearch");
       btn.disabled = true;
-      setStatus('Mencari "' + keyword + '"...');
+      setStatus(`Mencari "${keyword}"...`);
 
       try {
-        const html = await fetchHtml("https://monsnode.com/search.php?search=" + encodeURIComponent(keyword));
-        const items = parseList(html);
-        renderGrid(items);
-        setStatus("Ditemukan " + items.length + " hasil");
+        const res = await fetch(WORKER_URL + "/search?q=" + encodeURIComponent(keyword));
+        const json = await res.json();
+        if (json.status !== "success") throw new Error(json.message || "Gagal");
+        renderGrid(json.data);
+        setStatus(`Ditemukan ${json.data.length} hasil`);
       } catch (err) {
         setStatus("Error: " + err.message, true);
-        console.error(err);
       } finally {
         btn.disabled = false;
       }
     }
 
-    // Auto load saat pertama dibuka
+    function renderGrid(items) {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="${item.video_image}" loading="lazy" alt="">
+          <div class="label">Klik untuk play</div>
+        `;
+        card.onclick = () => playVideo(item);
+        grid.appendChild(card);
+      });
+    }
+
+    async function playVideo(item) {
+      setStatus("Mengambil link video...");
+      try {
+        // Kita fetch detail pakai Worker juga (nanti bisa ditambah endpoint)
+        // Sementara pakai cara sederhana dulu
+        const res = await fetch(item.detail_url);
+        const html = await res.text();
+        
+        const videoMatch = html.match(/href="(https:\/\/video\.twimg\.com\/[^"]+)"/);
+        const tweetMatch = html.match(/href="(https:\/\/(?:x|twitter)\.com\/[^"]+)"/);
+
+        if (!videoMatch) throw new Error("Video tidak ditemukan");
+
+        const videoUrl = videoMatch[1];
+        const tweetUrl = tweetMatch ? tweetMatch[1] : null;
+
+        const player = document.getElementById("player");
+        player.src = videoUrl;
+        player.play().catch(()=>{});
+
+        document.getElementById("modalInfo").innerHTML = `
+          ${tweetUrl ? `<a href="${tweetUrl}" target="_blank">Tweet</a> · ` : ""}
+          <a href="${videoUrl}" target="_blank">Download</a>
+        `;
+        document.getElementById("modal").classList.add("active");
+        setStatus("Video siap");
+      } catch (err) {
+        setStatus("Gagal play: " + err.message, true);
+      }
+    }
+
+    function closeModal() {
+      const player = document.getElementById("player");
+      player.pause();
+      player.removeAttribute("src");
+      document.getElementById("modal").classList.remove("active");
+    }
+
+    document.getElementById("btnRandom").onclick = loadRandom;
+    document.getElementById("btnSearch").onclick = loadSearch;
+    document.getElementById("btnClear").onclick = clearAll;
+    document.getElementById("btnClose").onclick = closeModal;
+    document.getElementById("modal").onclick = (e) => { if (e.target.id === "modal") closeModal(); };
+
+    // Auto load
     loadRandom();
   </script>
 </body>
