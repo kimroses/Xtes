@@ -127,36 +127,31 @@
       });
     }
 
-    async function playVideo(item) {
-      setStatus("Mengambil link video...");
-      try {
-        // Kita fetch detail pakai Worker juga (nanti bisa ditambah endpoint)
-        // Sementara pakai cara sederhana dulu
-        const res = await fetch(item.detail_url);
-        const html = await res.text();
-        
-        const videoMatch = html.match(/href="(https:\/\/video\.twimg\.com\/[^"]+)"/);
-        const tweetMatch = html.match(/href="(https:\/\/(?:x|twitter)\.com\/[^"]+)"/);
+async function playVideo(item) {
+  setStatus("Mengambil link video...");
+  try {
+    const res = await fetch(WORKER_URL + "/video?url=" + encodeURIComponent(item.detail_url));
+    const json = await res.json();
 
-        if (!videoMatch) throw new Error("Video tidak ditemukan");
+    if (json.status !== "success") throw new Error(json.message || "Gagal mengambil video");
 
-        const videoUrl = videoMatch[1];
-        const tweetUrl = tweetMatch ? tweetMatch[1] : null;
+    const player = document.getElementById("player");
+    player.src = json.video_url;
+    player.load();
+    player.play().catch(() => {});
 
-        const player = document.getElementById("player");
-        player.src = videoUrl;
-        player.play().catch(()=>{});
+    document.getElementById("modalInfo").innerHTML = `
+      ${json.tweet_url ? `<a href="${json.tweet_url}" target="_blank">Tweet Asli</a> · ` : ""}
+      <a href="${json.video_url}" target="_blank">Download MP4</a>
+    `;
 
-        document.getElementById("modalInfo").innerHTML = `
-          ${tweetUrl ? `<a href="${tweetUrl}" target="_blank">Tweet</a> · ` : ""}
-          <a href="${videoUrl}" target="_blank">Download</a>
-        `;
-        document.getElementById("modal").classList.add("active");
-        setStatus("Video siap");
-      } catch (err) {
-        setStatus("Gagal play: " + err.message, true);
-      }
-    }
+    document.getElementById("modal").classList.add("active");
+    setStatus("Video siap diputar");
+  } catch (err) {
+    setStatus("Gagal play: " + err.message, true);
+    console.error(err);
+  }
+}
 
     function closeModal() {
       const player = document.getElementById("player");
