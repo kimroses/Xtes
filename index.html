@@ -3,18 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monsnode Player</title>
+  <meta name="referrer" content="no-referrer"> <!-- Penting untuk mode Direct -->
+  <title>Monsnode Player - Test Direct vs Proxy</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0b0b0b; color: #eee; padding: 16px; }
     .container { max-width: 1200px; margin: 0 auto; }
     h1 { font-size: 1.5rem; margin-bottom: 4px; }
     .subtitle { color: #888; margin-bottom: 18px; font-size: 0.9rem; }
-    .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-    input { flex: 1; min-width: 160px; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+    input[type="text"] { flex: 1; min-width: 160px; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; }
     button { padding: 12px 16px; border-radius: 10px; border: none; background: #3b82f6; color: white; font-weight: 600; cursor: pointer; }
     button:disabled { opacity: 0.5; }
     button.secondary { background: #333; }
+    .toggle-box { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #aaa; background: #1a1a1a; padding: 8px 12px; border-radius: 8px; }
     #status { margin-bottom: 14px; padding: 10px 14px; border-radius: 8px; background: #1a1a1a; display: none; font-size: 0.9rem; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
     .card { background: #161616; border-radius: 12px; overflow: hidden; cursor: pointer; border: 1px solid #2a2a2a; }
@@ -33,13 +35,18 @@
 <body>
   <div class="container">
     <h1>Monsnode Player</h1>
-    <p class="subtitle">Klik thumbnail untuk play video</p>
+    <p class="subtitle">Test Direct (no-referrer) vs Proxy</p>
 
     <div class="controls">
       <button id="btnRandom">Random</button>
       <input type="text" id="keyword" value="japanese" placeholder="Cari..." />
       <button id="btnSearch">Search</button>
       <button class="secondary" id="btnClear">Clear</button>
+      
+      <label class="toggle-box">
+        <input type="checkbox" id="useProxy" checked>
+        Gunakan Proxy
+      </label>
     </div>
 
     <div id="status"></div>
@@ -127,33 +134,44 @@
       });
     }
 
-async function playVideo(item) {
-  setStatus("Mengambil link video...");
-  try {
-    const res = await fetch(WORKER_URL + "/video?url=" + encodeURIComponent(item.detail_url));
-    const json = await res.json();
+    async function playVideo(item) {
+      setStatus("Mengambil link video...");
+      try {
+        const res = await fetch(WORKER_URL + "/video?url=" + encodeURIComponent(item.detail_url));
+        const json = await res.json();
 
-    if (json.status !== "success") throw new Error(json.message || "Gagal");
+        if (json.status !== "success") throw new Error(json.message || "Gagal");
 
-    // Pakai proxy supaya tidak 403
-    const proxyUrl = WORKER_URL + "/proxy?url=" + encodeURIComponent(json.video_url);
+        const useProxy = document.getElementById("useProxy").checked;
+        const player = document.getElementById("player");
 
-    const player = document.getElementById("player");
-    player.src = proxyUrl;
-    player.load();
-    player.play().catch(() => {});
+        // Hapus attribute lama biar bersih
+        player.removeAttribute("referrerpolicy");
 
-    document.getElementById("modalInfo").innerHTML = `
-      ${json.tweet_url ? `<a href="${json.tweet_url}" target="_blank">Tweet Asli</a> · ` : ""}
-      <a href="${json.video_url}" target="_blank">Link Asli</a>
-    `;
+        if (useProxy) {
+          // Mode Proxy
+          player.src = WORKER_URL + "/proxy?url=" + encodeURIComponent(json.video_url);
+        } else {
+          // Mode Direct
+          player.src = json.video_url;
+        }
 
-    document.getElementById("modal").classList.add("active");
-    setStatus("Video siap diputar");
-  } catch (err) {
-    setStatus("Gagal: " + err.message, true);
-    console.error(err);
-  }
+        player.load();
+        player.play().catch(() => {});
+
+        document.getElementById("modalInfo").innerHTML = `
+          \( {json.tweet_url ? `<a href=" \){json.tweet_url}" target="_blank">Tweet Asli</a> · ` : ""}
+          <a href="${json.video_url}" target="_blank">Link Asli</a>
+          <br>
+          <small style="color:#888">Mode: <b>${useProxy ? "Proxy (Worker)" : "Direct (no-referrer)"}</b></small>
+        `;
+
+        document.getElementById("modal").classList.add("active");
+        setStatus(useProxy ? "Video siap (Proxy)" : "Video siap (Direct - no-referrer)");
+      } catch (err) {
+        setStatus("Gagal: " + err.message, true);
+        console.error(err);
+      }
     }
 
     function closeModal() {
