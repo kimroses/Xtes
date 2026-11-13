@@ -9,7 +9,6 @@
   <style>
     :root {
       --bg: #0a0a0a;
-      --card: #161616;
       --primary: #3b82f6;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -17,10 +16,10 @@
       background: var(--bg);
       color: #eee;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding-bottom: 90px;
+      padding-bottom: 100px;
     }
 
-    /* ===== GRID ===== */
+    /* GRID */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -60,6 +59,7 @@
       text-overflow: ellipsis;
       text-align: center;
       color: #fff;
+      cursor: pointer;
     }
     .card-overlay button {
       background: none;
@@ -71,7 +71,7 @@
     }
     .card-overlay button.saved { color: #22c55e; }
 
-    /* ===== SKELETON ===== */
+    /* SKELETON */
     .skeleton {
       background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
       background-size: 200% 100%;
@@ -84,36 +84,44 @@
       100% { background-position: -200% 0; }
     }
 
-    /* ===== BOTTOM NAV ===== */
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #666;
+      font-size: 1rem;
+    }
+
+    /* BOTTOM NAV */
     .bottom-nav {
       position: fixed;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: 6px;
-      background: rgba(30, 30, 30, 0.75);
+      gap: 4px;
+      background: rgba(30, 30, 30, 0.78);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      padding: 8px 12px;
+      padding: 8px 10px;
       border-radius: 40px;
       border: 1px solid rgba(255,255,255,0.08);
       z-index: 100;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
     }
     .bottom-nav button {
       background: none;
       border: none;
       color: #aaa;
-      font-size: 0.78rem;
-      padding: 8px 12px;
+      font-size: 0.72rem;
+      padding: 8px 11px;
       border-radius: 30px;
       cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 3px;
-      min-width: 58px;
+      min-width: 56px;
     }
     .bottom-nav button.active {
       background: rgba(59, 130, 246, 0.2);
@@ -121,7 +129,7 @@
     }
     .bottom-nav i { font-size: 1.15rem; }
 
-    /* ===== TRENDING FILTER ===== */
+    /* FILTERS */
     .filters {
       display: none;
       justify-content: center;
@@ -143,7 +151,33 @@
       color: white;
     }
 
-    /* ===== PLAYER VIEW ===== */
+    /* SEARCH BAR */
+    .search-bar {
+      display: none;
+      padding: 12px;
+      position: relative;
+    }
+    .search-bar.show { display: block; }
+    .search-bar input {
+      width: 100%;
+      padding: 13px 44px 13px 16px;
+      border-radius: 12px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: white;
+      font-size: 1rem;
+    }
+    .search-bar .search-icon {
+      position: absolute;
+      right: 26px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #888;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    /* PLAYER */
     #player-view {
       display: none;
       padding: 12px;
@@ -193,31 +227,18 @@
       color: #888;
       margin-bottom: 10px;
     }
-
-    /* Search overlay simple */
-    .search-bar {
-      display: none;
-      padding: 12px;
-    }
-    .search-bar.show { display: block; }
-    .search-bar input {
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 12px;
-      border: 1px solid #333;
-      background: #1a1a1a;
-      color: white;
-      font-size: 1rem;
-    }
   </style>
 </head>
 <body>
 
   <div id="main-view">
+    <!-- Search -->
     <div class="search-bar" id="searchBar">
-      <input type="text" id="searchInput" placeholder="Search..." onkeydown="if(event.key==='Enter')doSearch()">
+      <input type="text" id="searchInput" placeholder="Search videos..." />
+      <i class="fa-solid fa-magnifying-glass search-icon" id="searchIcon"></i>
     </div>
 
+    <!-- Trending Filters -->
     <div class="filters" id="trendingFilters">
       <button class="filter-btn active" data-period="24h">Today</button>
       <button class="filter-btn" data-period="3d">3 Day</button>
@@ -225,8 +246,9 @@
     </div>
 
     <div class="grid" id="grid"></div>
-    <div style="text-align:center; padding: 20px;">
-      <button onclick="loadMore()" id="loadMoreBtn" style="padding:12px 28px; border-radius:30px; border:none; background:#222; color:white; font-weight:600;">Load More</button>
+
+    <div style="text-align:center; padding: 16px 0 30px;">
+      <button onclick="loadMore()" id="loadMoreBtn" style="padding:12px 28px; border-radius:30px; border:none; background:#222; color:white; font-weight:600; display:none;">Load More</button>
     </div>
   </div>
 
@@ -254,7 +276,7 @@
   </nav>
 
   <script>
-    const WORKER_URL = "https://tetes.kimrosekim69.workers.dev"; // ganti jika perlu
+    const WORKER_URL = "https://tetes.kimrosekim69.workers.dev";
 
     let currentPage = "home";
     let currentPeriod = "24h";
@@ -273,8 +295,18 @@
         document.getElementById("trendingFilters").classList.toggle("show", currentPage === "trending");
         document.getElementById("searchBar").classList.toggle("show", currentPage === "search");
 
+        // Scroll ke atas
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
         closePlayer();
-        loadContent();
+
+        if (currentPage === "search") {
+          // Jangan load skeleton dulu
+          document.getElementById("grid").innerHTML = "";
+          document.getElementById("loadMoreBtn").style.display = "none";
+        } else {
+          loadContent();
+        }
       });
     });
 
@@ -289,9 +321,47 @@
       });
     });
 
+    // ===== SEARCH ICON LOGIC =====
+    const searchInput = document.getElementById("searchInput");
+    const searchIcon = document.getElementById("searchIcon");
+
+    searchInput.addEventListener("input", () => {
+      if (searchInput.value.trim()) {
+        searchIcon.className = "fa-solid fa-xmark search-icon";
+      } else {
+        searchIcon.className = "fa-solid fa-magnifying-glass search-icon";
+      }
+    });
+
+    searchIcon.addEventListener("click", () => {
+      if (searchInput.value.trim()) {
+        // Clear
+        searchInput.value = "";
+        searchIcon.className = "fa-solid fa-magnifying-glass search-icon";
+        document.getElementById("grid").innerHTML = "";
+        document.getElementById("loadMoreBtn").style.display = "none";
+      } else {
+        doSearch();
+      }
+    });
+
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doSearch();
+    });
+
+    function doSearch() {
+      const q = searchInput.value.trim();
+      if (!q) return;
+      currentPage = "search";
+      pageNum = 1;
+      loadContent();
+    }
+
     // ===== LOAD =====
     async function loadContent(append = false) {
       const grid = document.getElementById("grid");
+      const loadBtn = document.getElementById("loadMoreBtn");
+
       if (!append) {
         grid.innerHTML = "";
         // skeleton
@@ -300,6 +370,7 @@
           sk.className = "skeleton";
           grid.appendChild(sk);
         }
+        loadBtn.style.display = "none";
       }
 
       try {
@@ -308,24 +379,30 @@
         else if (currentPage === "trending") url = `${WORKER_URL}/trending?period=${currentPeriod}`;
         else if (currentPage === "surprise") url = `${WORKER_URL}/random`;
         else if (currentPage === "search") {
-          const q = document.getElementById("searchInput").value.trim();
-          if (!q) return;
+          const q = searchInput.value.trim();
           url = `${WORKER_URL}/search?q=${encodeURIComponent(q)}`;
         }
         else if (currentPage === "saved") {
           const saved = getSaved();
+          if (saved.length === 0) {
+            grid.innerHTML = `<div class="empty-state">No videos saved yet<br><small>Like a video to save it here</small></div>`;
+            loadBtn.style.display = "none";
+            return;
+          }
           renderGrid(saved, false);
+          loadBtn.style.display = "none";
           return;
         }
 
         const res = await fetch(url);
         const json = await res.json();
-        if (json.status !== "success") throw new Error("Gagal load");
+        if (json.status !== "success") throw new Error("Gagal");
 
-        if (append) currentItems = currentItems.concat(json.data);
-        else currentItems = json.data;
+        if (append) currentItems = currentItems.concat(json.data || []);
+        else currentItems = json.data || [];
 
         renderGrid(currentItems, append);
+        loadBtn.style.display = currentItems.length > 0 ? "inline-block" : "none";
       } catch (err) {
         console.error(err);
         if (!append) grid.innerHTML = "";
@@ -337,61 +414,53 @@
       loadContent(true);
     }
 
-    function doSearch() {
-      currentPage = "search";
-      pageNum = 1;
-      loadContent();
+    // ===== RENDER CARD =====
+    function createCard(item) {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const isSaved = getSaved().some(v => v.detail_url === item.detail_url);
+
+      card.innerHTML = `
+        <img src="${item.video_image}" loading="lazy" alt="">
+        <div class="card-overlay">
+          <button class="like-btn ${isSaved ? 'saved' : ''}">
+            <i class="fa-${isSaved ? 'solid' : 'regular'} fa-thumbs-up"></i>
+          </button>
+          <div class="username">${item.username || 'user'}</div>
+          <button class="dislike-btn">
+            <i class="fa-regular fa-thumbs-down"></i>
+          </button>
+        </div>
+      `;
+
+      card.querySelector("img").onclick = () => openPlayer(item);
+
+      card.querySelector(".username").onclick = (e) => {
+        e.stopPropagation();
+        loadUser(item.user_id);
+      };
+
+      card.querySelector(".like-btn").onclick = (e) => {
+        e.stopPropagation();
+        toggleSave(item, e.currentTarget);
+      };
+
+      card.querySelector(".dislike-btn").onclick = (e) => {
+        e.stopPropagation();
+        removeSave(item);
+        const likeBtn = e.currentTarget.closest(".card").querySelector(".like-btn");
+        likeBtn.classList.remove("saved");
+        likeBtn.innerHTML = '<i class="fa-regular fa-thumbs-up"></i>';
+      };
+
+      return card;
     }
 
-    // ===== RENDER CARD =====
     function renderGrid(items, append = false) {
       const grid = document.getElementById("grid");
       if (!append) grid.innerHTML = "";
-
-      items.forEach(item => {
-        const card = document.createElement("div");
-        card.className = "card";
-
-        const isSaved = getSaved().some(v => v.detail_url === item.detail_url);
-
-        card.innerHTML = `
-          <img src="${item.video_image}" loading="lazy" alt="">
-          <div class="card-overlay">
-            <button class="like-btn ${isSaved ? 'saved' : ''}" data-url="${item.detail_url}">
-              <i class="fa-${isSaved ? 'solid' : 'regular'} fa-thumbs-up"></i>
-            </button>
-            <div class="username">${item.username || 'user'}</div>
-            <button class="dislike-btn">
-              <i class="fa-regular fa-thumbs-down"></i>
-            </button>
-          </div>
-        `;
-
-        // klik thumbnail → play
-        card.querySelector("img").onclick = () => openPlayer(item);
-
-        // username → related user
-        card.querySelector(".username").onclick = (e) => {
-          e.stopPropagation();
-          loadUser(item.user_id);
-        };
-
-        // like
-        card.querySelector(".like-btn").onclick = (e) => {
-          e.stopPropagation();
-          toggleSave(item, e.currentTarget);
-        };
-
-        // dislike
-        card.querySelector(".dislike-btn").onclick = (e) => {
-          e.stopPropagation();
-          removeSave(item);
-          e.currentTarget.closest(".card").querySelector(".like-btn").classList.remove("saved");
-          e.currentTarget.closest(".card").querySelector(".like-btn i").className = "fa-regular fa-thumbs-up";
-        };
-
-        grid.appendChild(card);
-      });
+      items.forEach(item => grid.appendChild(createCard(item)));
     }
 
     // ===== SAVED =====
@@ -420,7 +489,7 @@
       saveList(list);
     }
 
-    // ===== PLAYER =====
+    // ===== PLAYER + RELATED =====
     async function openPlayer(item) {
       try {
         const res = await fetch(WORKER_URL + "/video?url=" + encodeURIComponent(item.detail_url));
@@ -429,8 +498,8 @@
 
         const player = document.getElementById("player");
         player.src = json.video_url;
+        player.removeAttribute("autoplay");
         player.load();
-        player.play().catch(()=>{});
 
         document.getElementById("btnDownload").onclick = () => window.open(json.video_url, "_blank");
         document.getElementById("btnShare").onclick = () => {
@@ -441,33 +510,25 @@
           }
         };
 
-        // related dari user
-        loadRelated(item.user_id);
+        // Related dengan overlay lengkap
+        const relatedGrid = document.getElementById("relatedGrid");
+        relatedGrid.innerHTML = "";
+        try {
+          const r = await fetch(WORKER_URL + "/user?id=" + item.user_id);
+          const j = await r.json();
+          if (j.status === "success") {
+            j.data.slice(0, 12).forEach(rel => {
+              relatedGrid.appendChild(createCard(rel));
+            });
+          }
+        } catch(e) {}
 
         document.getElementById("main-view").classList.add("hidden");
         document.getElementById("player-view").classList.add("active");
-        window.scrollTo(0,0);
+        window.scrollTo(0, 0);
       } catch (err) {
         console.error(err);
       }
-    }
-
-    async function loadRelated(userId) {
-      const grid = document.getElementById("relatedGrid");
-      grid.innerHTML = "";
-      try {
-        const res = await fetch(WORKER_URL + "/user?id=" + userId);
-        const json = await res.json();
-        if (json.status === "success") {
-          json.data.slice(0, 12).forEach(item => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `<img src="${item.video_image}" loading="lazy">`;
-            card.onclick = () => openPlayer(item);
-            grid.appendChild(card);
-          });
-        }
-      } catch (e) {}
     }
 
     async function loadUser(userId) {
@@ -475,7 +536,7 @@
       pageNum = 1;
       const grid = document.getElementById("grid");
       grid.innerHTML = "";
-      for (let i=0;i<8;i++) {
+      for (let i = 0; i < 8; i++) {
         const sk = document.createElement("div");
         sk.className = "skeleton";
         grid.appendChild(sk);
@@ -485,6 +546,7 @@
         const json = await res.json();
         currentItems = json.data || [];
         renderGrid(currentItems);
+        document.getElementById("loadMoreBtn").style.display = "none";
       } catch(e) {}
     }
 
@@ -496,7 +558,7 @@
       document.getElementById("main-view").classList.remove("hidden");
     }
 
-    // init
+    // Init
     loadContent();
   </script>
 </body>
