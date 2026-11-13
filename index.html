@@ -5,11 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <meta name="referrer" content="no-referrer">
   <title>MonsPlay</title>
+
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Plyr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css">
+
   <style>
     :root {
       --bg: #0a0a0a;
       --primary: #3b82f6;
+      --plyr-color-main: #3b82f6;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -86,10 +93,20 @@
 
     /* EMPTY STATE */
     .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
       text-align: center;
-      padding: 80px 20px;
       color: #666;
-      font-size: 1rem;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .empty-state small {
+      font-size: 0.9rem;
+      color: #555;
     }
 
     /* BOTTOM NAV */
@@ -188,15 +205,10 @@
     #main-view.hidden { display: none; }
 
     .player-wrapper {
-      background: #000;
       border-radius: 14px;
       overflow: hidden;
       margin-bottom: 14px;
-    }
-    .player-wrapper video {
-      width: 100%;
-      max-height: 70vh;
-      display: block;
+      background: #000;
     }
     .action-row {
       display: flex;
@@ -227,6 +239,17 @@
       color: #888;
       margin-bottom: 10px;
     }
+
+    #loadMoreBtn {
+      padding: 12px 28px;
+      border-radius: 30px;
+      border: none;
+      background: #222;
+      color: white;
+      font-weight: 600;
+      display: none;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -248,20 +271,23 @@
     <div class="grid" id="grid"></div>
 
     <div style="text-align:center; padding: 16px 0 30px;">
-      <button onclick="loadMore()" id="loadMoreBtn" style="padding:12px 28px; border-radius:30px; border:none; background:#222; color:white; font-weight:600; display:none;">Load More</button>
+      <button id="loadMoreBtn" onclick="loadMore()">Load More</button>
     </div>
   </div>
 
   <!-- PLAYER VIEW -->
   <div id="player-view">
     <button class="back-btn" onclick="closePlayer()">← Back</button>
+
     <div class="player-wrapper">
-      <video id="player" controls playsinline></video>
+      <video id="player" playsinline controls></video>
     </div>
+
     <div class="action-row">
       <button id="btnDownload">Download</button>
       <button id="btnShare">Share</button>
     </div>
+
     <div class="related-title">Related from this user</div>
     <div class="grid" id="relatedGrid"></div>
   </div>
@@ -275,6 +301,9 @@
     <button class="nav-btn" data-page="saved"><i class="fa-solid fa-bookmark"></i><span>Saved</span></button>
   </nav>
 
+  <!-- Plyr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js"></script>
+
   <script>
     const WORKER_URL = "https://tetes.kimrosekim69.workers.dev";
 
@@ -282,6 +311,15 @@
     let currentPeriod = "24h";
     let currentItems = [];
     let pageNum = 1;
+    let player = null;
+
+    // Inisialisasi Plyr
+    document.addEventListener("DOMContentLoaded", () => {
+      player = new Plyr("#player", {
+        autoplay: false,
+        controls: ["play-large", "play", "progress", "current-time", "mute", "volume", "fullscreen"]
+      });
+    });
 
     // ===== NAV =====
     document.querySelectorAll(".nav-btn").forEach(btn => {
@@ -295,13 +333,10 @@
         document.getElementById("trendingFilters").classList.toggle("show", currentPage === "trending");
         document.getElementById("searchBar").classList.toggle("show", currentPage === "search");
 
-        // Scroll ke atas
         window.scrollTo({ top: 0, behavior: "smooth" });
-
         closePlayer();
 
         if (currentPage === "search") {
-          // Jangan load skeleton dulu
           document.getElementById("grid").innerHTML = "";
           document.getElementById("loadMoreBtn").style.display = "none";
         } else {
@@ -321,21 +356,18 @@
       });
     });
 
-    // ===== SEARCH ICON LOGIC =====
+    // ===== SEARCH =====
     const searchInput = document.getElementById("searchInput");
     const searchIcon = document.getElementById("searchIcon");
 
     searchInput.addEventListener("input", () => {
-      if (searchInput.value.trim()) {
-        searchIcon.className = "fa-solid fa-xmark search-icon";
-      } else {
-        searchIcon.className = "fa-solid fa-magnifying-glass search-icon";
-      }
+      searchIcon.className = searchInput.value.trim()
+        ? "fa-solid fa-xmark search-icon"
+        : "fa-solid fa-magnifying-glass search-icon";
     });
 
     searchIcon.addEventListener("click", () => {
       if (searchInput.value.trim()) {
-        // Clear
         searchInput.value = "";
         searchIcon.className = "fa-solid fa-magnifying-glass search-icon";
         document.getElementById("grid").innerHTML = "";
@@ -345,26 +377,24 @@
       }
     });
 
-    searchInput.addEventListener("keydown", (e) => {
+    searchInput.addEventListener("keydown", e => {
       if (e.key === "Enter") doSearch();
     });
 
     function doSearch() {
-      const q = searchInput.value.trim();
-      if (!q) return;
+      if (!searchInput.value.trim()) return;
       currentPage = "search";
       pageNum = 1;
       loadContent();
     }
 
-    // ===== LOAD =====
+    // ===== LOAD CONTENT =====
     async function loadContent(append = false) {
       const grid = document.getElementById("grid");
       const loadBtn = document.getElementById("loadMoreBtn");
 
       if (!append) {
         grid.innerHTML = "";
-        // skeleton
         for (let i = 0; i < 12; i++) {
           const sk = document.createElement("div");
           sk.className = "skeleton";
@@ -375,17 +405,22 @@
 
       try {
         let url = "";
-        if (currentPage === "home") url = `${WORKER_URL}/home?page=${pageNum}`;
-        else if (currentPage === "trending") url = `${WORKER_URL}/trending?period=${currentPeriod}`;
-        else if (currentPage === "surprise") url = `${WORKER_URL}/random`;
-        else if (currentPage === "search") {
-          const q = searchInput.value.trim();
-          url = `${WORKER_URL}/search?q=${encodeURIComponent(q)}`;
-        }
-        else if (currentPage === "saved") {
+        if (currentPage === "home") {
+          url = `${WORKER_URL}/home?page=${pageNum}`;
+        } else if (currentPage === "trending") {
+          url = `${WORKER_URL}/trending?period=${currentPeriod}`;
+        } else if (currentPage === "surprise") {
+          url = `${WORKER_URL}/random`;
+        } else if (currentPage === "search") {
+          url = `${WORKER_URL}/search?q=${encodeURIComponent(searchInput.value.trim())}`;
+        } else if (currentPage === "saved") {
           const saved = getSaved();
           if (saved.length === 0) {
-            grid.innerHTML = `<div class="empty-state">No videos saved yet<br><small>Like a video to save it here</small></div>`;
+            grid.innerHTML = `
+              <div class="empty-state">
+                No videos saved yet<br>
+                <small>Like a video to save it here</small>
+              </div>`;
             loadBtn.style.display = "none";
             return;
           }
@@ -398,11 +433,23 @@
         const json = await res.json();
         if (json.status !== "success") throw new Error("Gagal");
 
-        if (append) currentItems = currentItems.concat(json.data || []);
-        else currentItems = json.data || [];
+        const newItems = json.data || [];
+
+        if (append) {
+          currentItems = currentItems.concat(newItems);
+        } else {
+          currentItems = newItems;
+        }
 
         renderGrid(currentItems, append);
-        loadBtn.style.display = currentItems.length > 0 ? "inline-block" : "none";
+
+        // Load More HANYA di Home
+        if (currentPage === "home" && newItems.length >= 10) {
+          loadBtn.style.display = "inline-block";
+        } else {
+          loadBtn.style.display = "none";
+        }
+
       } catch (err) {
         console.error(err);
         if (!append) grid.innerHTML = "";
@@ -410,11 +457,12 @@
     }
 
     function loadMore() {
+      if (currentPage !== "home") return;
       pageNum++;
       loadContent(true);
     }
 
-    // ===== RENDER CARD =====
+    // ===== CARD =====
     function createCard(item) {
       const card = document.createElement("div");
       card.className = "card";
@@ -424,10 +472,10 @@
       card.innerHTML = `
         <img src="${item.video_image}" loading="lazy" alt="">
         <div class="card-overlay">
-          <button class="like-btn ${isSaved ? 'saved' : ''}">
-            <i class="fa-${isSaved ? 'solid' : 'regular'} fa-thumbs-up"></i>
+          <button class="like-btn ${isSaved ? "saved" : ""}">
+            <i class="fa-${isSaved ? "solid" : "regular"} fa-thumbs-up"></i>
           </button>
-          <div class="username">${item.username || 'user'}</div>
+          <div class="username">${item.username || "user"}</div>
           <button class="dislike-btn">
             <i class="fa-regular fa-thumbs-down"></i>
           </button>
@@ -489,28 +537,30 @@
       saveList(list);
     }
 
-    // ===== PLAYER + RELATED =====
+    // ===== PLAYER =====
     async function openPlayer(item) {
       try {
         const res = await fetch(WORKER_URL + "/video?url=" + encodeURIComponent(item.detail_url));
         const json = await res.json();
         if (json.status !== "success") throw new Error("Gagal");
 
-        const player = document.getElementById("player");
-        player.src = json.video_url;
-        player.removeAttribute("autoplay");
-        player.load();
+        // Plyr
+        player.source = {
+          type: "video",
+          sources: [{ src: json.video_url, type: "video/mp4" }]
+        };
 
         document.getElementById("btnDownload").onclick = () => window.open(json.video_url, "_blank");
         document.getElementById("btnShare").onclick = () => {
-          if (navigator.share) navigator.share({ url: json.video_url });
-          else {
+          if (navigator.share) {
+            navigator.share({ url: json.video_url });
+          } else {
             navigator.clipboard.writeText(json.video_url);
             alert("Link disalin");
           }
         };
 
-        // Related dengan overlay lengkap
+        // Related
         const relatedGrid = document.getElementById("relatedGrid");
         relatedGrid.innerHTML = "";
         try {
@@ -521,7 +571,7 @@
               relatedGrid.appendChild(createCard(rel));
             });
           }
-        } catch(e) {}
+        } catch (e) {}
 
         document.getElementById("main-view").classList.add("hidden");
         document.getElementById("player-view").classList.add("active");
@@ -547,13 +597,13 @@
         currentItems = json.data || [];
         renderGrid(currentItems);
         document.getElementById("loadMoreBtn").style.display = "none";
-      } catch(e) {}
+      } catch (e) {}
     }
 
     function closePlayer() {
-      const player = document.getElementById("player");
-      player.pause();
-      player.removeAttribute("src");
+      if (player) {
+        player.stop();
+      }
       document.getElementById("player-view").classList.remove("active");
       document.getElementById("main-view").classList.remove("hidden");
     }
