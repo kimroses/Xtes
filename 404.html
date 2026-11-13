@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>MonsPlay</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css">
+
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --primary: #3b82f6;
+      --plyr-color-main: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding-bottom: 100px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      padding: 12px;
+    }
+    .card {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #111;
+      aspect-ratio: 9/16;
+    }
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-overlay {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 8px 10px;
+      background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .card-overlay .username {
+      flex: 1;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+      color: #fff;
+      cursor: pointer;
+    }
+    .card-overlay button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .card-overlay button.saved { color: #22c55e; }
+
+    .skeleton {
+      background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 12px;
+      aspect-ratio: 9/16;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 65vh;
+      text-align: center;
+      color: #666;
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+    .empty-state small { color: #555; font-size: 0.9rem; }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      background: rgba(30, 30, 30, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 8px 10px;
+      border-radius: 40px;
+      border: 1px solid rgba(255,255,255,0.08);
+      z-index: 100;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+    }
+    .bottom-nav button {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 0.72rem;
+      padding: 8px 11px;
+      border-radius: 30px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      min-width: 56px;
+    }
+    .bottom-nav button.active {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+    .bottom-nav i { font-size: 1.15rem; }
+
+    .filters {
+      display: none;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 12px 0;
+    }
+    .filters.show { display: flex; }
+    .filters button {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #aaa;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .filters button.active {
+      background: #333;
+      color: white;
+    }
+
+    .search-bar {
+      display: none;
+      padding: 12px;
+      position: relative;
+    }
+    .search-bar.show { display: block; }
+    .search-bar input {
+      width: 100%;
+      padding: 13px 44px 13px 16px;
+      border-radius: 12px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: white;
+      font-size: 1rem;
+    }
+    .search-bar .search-icon {
+      position: absolute;
+      right: 26px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #888;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    /* PLAYER */
+    #player-view {
+      display: none;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 12px;
+    }
+    #player-view.active { display: block; }
+    #main-view.hidden { display: none; }
+
+    .player-wrapper {
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      background: #000;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .action-row button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: #222;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .action-row button.saved {
+      background: #16a34a;
+    }
+
+    .related-title {
+      font-size: 1rem;
+      color: #888;
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+
+    /* Related pakai padding sama dengan home */
+    #relatedGrid {
+      padding: 0;
+    }
+
+    #loadMoreBtn {
+      padding: 12px 28px;
+      border-radius: 30px;
+      border: none;
+      background: #222;
+      color: white;
+      font-weight: 600;
+      display: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="main-view">
+    <div class="search-bar" id="searchBar">
+      <input type="text" id="searchInput" placeholder="Search videos..." />
+      <i class="fa-solid fa-magnifying-glass search-icon" id="searchIcon"></i>
+    </div>
+
+    <div class="filters" id="trendingFilters">
+      <button class="filter-btn active" data-period="24h">Today</button>
+      <button class="filter-btn" data-period="3d">3 Day</button>
+      <button class="filter-btn" data-period="7d">Week</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div style="text-align:center; padding: 16px 0 30px;">
+      <button id="loadMoreBtn" onclick="loadMore()">Load More</button>
+    </div>
+  </div>
+
+  <!-- PLAYER VIEW -->
+  <div id="player-view">
+    <div class="player-wrapper">
+      <video id="player" playsinline controls></video>
+    </div>
+
+    <div class="action-row">
+      <button id="btnLike"><i class="fa-regular fa-thumbs-up"></i> Like</button>
+      <button id="btnDislike"><i class="fa-regular fa-thumbs-down"></i> Dislike</button>
+      <button id="btnShare"><i class="fa-solid fa-share-nodes"></i> Share</button>
+    </div>
+
+    <div class="related-title">Related from this user</div>
+    <div class="grid" id="relatedGrid"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-page="home"><i class="fa-solid fa-house"></i><span>Home</span></button>
+    <button class="nav-btn" data-page="trending"><i class="fa-solid fa-fire"></i><span>Trending</span></button>
+    <button class="nav-btn" data-page="surprise"><i class="fa-solid fa-shuffle"></i><span>Surprise</span></button>
+    <button class="nav-btn" data-page="search"><i class="fa-solid fa-magnifying-glass"></i><span>Search</span></button>
+    <button class="nav-btn" data-page="saved"><i class="fa-solid fa-bookmark"></i><span>Saved</span></button>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js"></script>
+
+  <script>
+    const WORKER_URL = "https://tetes.kimrosekim69.workers.dev";
+    const BASE_PATH = location.pathname.startsWith("/v/") ? "/" : location.pathname.replace(/\/$/, "") || "";
+
+    let currentPage = "home";
+    let currentPeriod = "24h";
+    let currentItems = [];
+    let pageNum = 1;
+    let player = null;
+    let currentPlaying = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      player = new Plyr("#player", {
+        autoplay: false,
+        controls: ["play-large", "play", "progress", "current-time", "mute", "volume", "fullscreen"]
+      });
+
+      // Cek URL saat pertama kali dibuka
+      handleRoute();
+    });
+
+    // ===== ROUTING =====
+    function handleRoute() {
+      const path = location.pathname;
+      const match = path.match(/\/v\/(\d+)/);
+
+      if (match) {
+        const videoId = match[1];
+        openPlayerById(videoId);
+      } else {
+        // Home
+        showMain();
+        if (currentPage === "home") loadContent();
+      }
+    }
+
+    window.addEventListener("popstate", () => {
+      handleRoute();
+    });
+
+    function goHome() {
+      history.pushState(null, "", "/");
+      showMain();
+      currentPage = "home";
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      document.querySelector('.nav-btn[data-page="home"]').classList.add("active");
+      loadContent();
+    }
+
+    function showMain() {
+      document.getElementById("player-view").classList.remove("active");
+      document.getElementById("main-view").classList.remove("hidden");
+      if (player) player.stop();
+    }
+
+    // ===== NAV =====
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentPage = btn.dataset.page;
+        pageNum = 1;
+        currentItems = [];
+
+        // Kembali ke root URL
+        if (location.pathname.includes("/v/")) {
+          history.pushState(null, "", "/");
+        }
+
+        document.getElementById("trendingFilters").classList.toggle("show", currentPage === "trending");
+        document.getElementById("searchBar").classList.toggle("show", currentPage === "search");
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        showMain();
+
+        if (currentPage === "search") {
+          document.getElementById("grid").innerHTML = "";
+          document.getElementById("loadMoreBtn").style.display = "none";
+        } else {
+          loadContent();
+        }
+      });
+    });
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentPeriod = btn.dataset.period;
+        pageNum = 1;
+        currentItems = [];
+        loadContent();
+      });
+    });
+
+    // ===== SEARCH =====
+    const searchInput = document.getElementById("searchInput");
+    const searchIcon = document.getElementById("searchIcon");
+
+    searchInput.addEventListener("input", () => {
+      searchIcon.className = searchInput.value.trim()
+        ? "fa-solid fa-xmark search-icon"
+        : "fa-solid fa-magnifying-glass search-icon";
+    });
+
+    searchIcon.addEventListener("click", () => {
+      if (searchInput.value.trim()) {
+        searchInput.value = "";
+        searchIcon.className = "fa-solid fa-magnifying-glass search-icon";
+        document.getElementById("grid").innerHTML = "";
+        document.getElementById("loadMoreBtn").style.display = "none";
+      } else {
+        doSearch();
+      }
+    });
+
+    searchInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") doSearch();
+    });
+
+    function doSearch() {
+      if (!searchInput.value.trim()) return;
+      currentPage = "search";
+      pageNum = 1;
+      loadContent();
+    }
+
+    // ===== LOAD =====
+    async function loadContent(append = false) {
+      const grid = document.getElementById("grid");
+      const loadBtn = document.getElementById("loadMoreBtn");
+
+      if (!append) {
+        grid.innerHTML = "";
+        for (let i = 0; i < 12; i++) {
+          const sk = document.createElement("div");
+          sk.className = "skeleton";
+          grid.appendChild(sk);
+        }
+        loadBtn.style.display = "none";
+      }
+
+      try {
+        let url = "";
+        if (currentPage === "home") url = `${WORKER_URL}/home?page=${pageNum}`;
+        else if (currentPage === "trending") url = `${WORKER_URL}/trending?period=${currentPeriod}`;
+        else if (currentPage === "surprise") url = `${WORKER_URL}/random`;
+        else if (currentPage === "search") url = `${WORKER_URL}/search?q=${encodeURIComponent(searchInput.value.trim())}`;
+        else if (currentPage === "saved") {
+          const saved = getSaved();
+          if (saved.length === 0) {
+            grid.innerHTML = `
+              <div class="empty-state">
+                No videos saved yet<br>
+                <small>Like a video to save it here</small>
+              </div>`;
+            loadBtn.style.display = "none";
+            return;
+          }
+          renderGrid(saved, false);
+          loadBtn.style.display = "none";
+          return;
+        }
+
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json.status !== "success") throw new Error("Gagal");
+
+        const newItems = json.data || [];
+        currentItems = append ? currentItems.concat(newItems) : newItems;
+
+        renderGrid(currentItems, append);
+
+        // Load More hanya di Home
+        loadBtn.style.display = (currentPage === "home" && newItems.length >= 10) ? "inline-block" : "none";
+
+      } catch (err) {
+        console.error(err);
+        if (!append) grid.innerHTML = "";
+      }
+    }
+
+    function loadMore() {
+      if (currentPage !== "home") return;
+      pageNum++;
+      loadContent(true);
+    }
+
+    // ===== CARD =====
+    function createCard(item) {
+      const card = document.createElement("div");
+      card.className = "card";
+      const isSaved = getSaved().some(v => v.detail_url === item.detail_url);
+
+      card.innerHTML = `
+        <img src="${item.video_image}" loading="lazy" alt="">
+        <div class="card-overlay">
+          <button class="like-btn ${isSaved ? "saved" : ""}">
+            <i class="fa-${isSaved ? "solid" : "regular"} fa-thumbs-up"></i>
+          </button>
+          <div class="username">${item.username || "user"}</div>
+          <button class="dislike-btn">
+            <i class="fa-regular fa-thumbs-down"></i>
+          </button>
+        </div>
+      `;
+
+      card.querySelector("img").onclick = () => openPlayer(item);
+
+      card.querySelector(".username").onclick = (e) => {
+        e.stopPropagation();
+        loadUser(item.user_id);
+      };
+
+      card.querySelector(".like-btn").onclick = (e) => {
+        e.stopPropagation();
+        toggleSave(item, e.currentTarget);
+      };
+
+      card.querySelector(".dislike-btn").onclick = (e) => {
+        e.stopPropagation();
+        removeSave(item);
+        const likeBtn = e.currentTarget.closest(".card").querySelector(".like-btn");
+        likeBtn.classList.remove("saved");
+        likeBtn.innerHTML = '<i class="fa-regular fa-thumbs-up"></i>';
+      };
+
+      return card;
+    }
+
+    function renderGrid(items, append = false) {
+      const grid = document.getElementById("grid");
+      if (!append) grid.innerHTML = "";
+      items.forEach(item => grid.appendChild(createCard(item)));
+    }
+
+    // ===== SAVED =====
+    function getSaved() {
+      return JSON.parse(localStorage.getItem("mons_saved") || "[]");
+    }
+    function saveList(list) {
+      localStorage.setItem("mons_saved", JSON.stringify(list));
+    }
+    function toggleSave(item, btn) {
+      let list = getSaved();
+      const idx = list.findIndex(v => v.detail_url === item.detail_url);
+      if (idx >= 0) {
+        list.splice(idx, 1);
+        if (btn) {
+          btn.classList.remove("saved");
+          btn.innerHTML = '<i class="fa-regular fa-thumbs-up"></i>';
+        }
+      } else {
+        list.unshift(item);
+        if (btn) {
+          btn.classList.add("saved");
+          btn.innerHTML = '<i class="fa-solid fa-thumbs-up"></i>';
+        }
+      }
+      saveList(list);
+      updatePlayerLikeButton();
+    }
+    function removeSave(item) {
+      let list = getSaved().filter(v => v.detail_url !== item.detail_url);
+      saveList(list);
+      updatePlayerLikeButton();
+    }
+
+    // ===== PLAYER =====
+    function getVideoId(detailUrl) {
+      const m = detailUrl.match(/[?&]v=(\d+)/);
+      return m ? m[1] : null;
+    }
+
+    async function openPlayer(item) {
+      currentPlaying = item;
+      const videoId = getVideoId(item.detail_url);
+      if (videoId) {
+        history.pushState({ videoId }, "", `/v/${videoId}`);
+      }
+      await loadPlayer(item);
+    }
+
+    async function openPlayerById(videoId) {
+      const detailUrl = `https://monsnode.com/redirect.php?v=${videoId}`;
+      // Buat object minimal
+      const item = {
+        detail_url: detailUrl,
+        video_image: "",
+        username: "user",
+        user_id: ""
+      };
+      currentPlaying = item;
+      await loadPlayer(item);
+    }
+
+    async function loadPlayer(item) {
+      try {
+        const res = await fetch(WORKER_URL + "/video?url=" + encodeURIComponent(item.detail_url));
+        const json = await res.json();
+        if (json.status !== "success") throw new Error("Gagal");
+
+        player.source = {
+          type: "video",
+          sources: [{ src: json.video_url, type: "video/mp4" }]
+        };
+
+        // Like / Dislike / Share
+        updatePlayerLikeButton();
+
+        document.getElementById("btnLike").onclick = () => {
+          toggleSave(currentPlaying);
+          updatePlayerLikeButton();
+        };
+
+        document.getElementById("btnDislike").onclick = () => {
+          removeSave(currentPlaying);
+          updatePlayerLikeButton();
+        };
+
+        document.getElementById("btnShare").onclick = () => {
+          const videoId = getVideoId(item.detail_url);
+          const shareUrl = `${location.origin}/v/${videoId}`;
+          if (navigator.share) {
+            navigator.share({
+              title: "MonsPlay Video",
+              url: shareUrl
+            });
+          } else {
+            navigator.clipboard.writeText(shareUrl);
+            alert("Link disalin: " + shareUrl);
+          }
+        };
+
+        // Related
+        const relatedGrid = document.getElementById("relatedGrid");
+        relatedGrid.innerHTML = "";
+        if (item.user_id) {
+          try {
+            const r = await fetch(WORKER_URL + "/user?id=" + item.user_id);
+            const j = await r.json();
+            if (j.status === "success") {
+              j.data.slice(0, 12).forEach(rel => relatedGrid.appendChild(createCard(rel)));
+            }
+          } catch (e) {}
+        }
+
+        document.getElementById("main-view").classList.add("hidden");
+        document.getElementById("player-view").classList.add("active");
+        window.scrollTo(0, 0);
+      } catch (err) {
+        console.error(err);
+        alert("Gagal memuat video");
+        goHome();
+      }
+    }
+
+    function updatePlayerLikeButton() {
+      if (!currentPlaying) return;
+      const isSaved = getSaved().some(v => v.detail_url === currentPlaying.detail_url);
+      const btn = document.getElementById("btnLike");
+      if (isSaved) {
+        btn.classList.add("saved");
+        btn.innerHTML = '<i class="fa-solid fa-thumbs-up"></i> Liked';
+      } else {
+        btn.classList.remove("saved");
+        btn.innerHTML = '<i class="fa-regular fa-thumbs-up"></i> Like';
+      }
+    }
+
+    async function loadUser(userId) {
+      currentPage = "user";
+      history.pushState(null, "", "/");
+      showMain();
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      for (let i = 0; i < 8; i++) {
+        const sk = document.createElement("div");
+        sk.className = "skeleton";
+        grid.appendChild(sk);
+      }
+      try {
+        const res = await fetch(WORKER_URL + "/user?id=" + userId);
+        const json = await res.json();
+        currentItems = json.data || [];
+        renderGrid(currentItems);
+        document.getElementById("loadMoreBtn").style.display = "none";
+      } catch (e) {}
+    }
+
+    function closePlayer() {
+      // tidak dipakai lagi (tidak ada tombol back)
+    }
+  </script>
+</body>
+</html>
