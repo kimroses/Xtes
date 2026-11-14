@@ -84,7 +84,7 @@
       100% { background-position: -200% 0; }
     }
 
-    .empty-state {
+    .empty-state, .error-state {
       grid-column: 1 / -1;
       display: flex;
       flex-direction: column;
@@ -95,8 +95,9 @@
       color: #666;
       font-size: 1.05rem;
       line-height: 1.6;
+      padding: 20px;
     }
-    .empty-state small { color: #555; font-size: 0.9rem; }
+    .empty-state small, .error-state small { color: #555; font-size: 0.9rem; }
 
     .bottom-nav {
       position: fixed;
@@ -180,7 +181,6 @@
       font-size: 1.1rem;
     }
 
-    /* PLAYER */
     #player-view {
       display: none;
       max-width: 600px;
@@ -216,21 +216,15 @@
       justify-content: center;
       gap: 8px;
     }
-    .action-row button.saved {
-      background: #16a34a;
-    }
+    .action-row button.saved { background: #16a34a; }
 
     .related-title {
       font-size: 1rem;
       color: #888;
       margin-bottom: 10px;
-      padding: 0 2px;
     }
 
-    /* Related pakai padding sama dengan home */
-    #relatedGrid {
-      padding: 0;
-    }
+    #relatedGrid { padding: 0; }
 
     #loadMoreBtn {
       padding: 12px 28px;
@@ -265,7 +259,6 @@
     </div>
   </div>
 
-  <!-- PLAYER VIEW -->
   <div id="player-view">
     <div class="player-wrapper">
       <video id="player" playsinline controls></video>
@@ -281,7 +274,6 @@
     <div class="grid" id="relatedGrid"></div>
   </div>
 
-  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-btn active" data-page="home"><i class="fa-solid fa-house"></i><span>Home</span></button>
     <button class="nav-btn" data-page="trending"><i class="fa-solid fa-fire"></i><span>Trending</span></button>
@@ -293,13 +285,13 @@
   <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js"></script>
 
   <script>
-    const WORKER_URL = "https://tetes.kimrosekim69.workers.dev";
-    const BASE_PATH = location.pathname.startsWith("/v/") ? "/" : location.pathname.replace(/\/$/, "") || "";
+    // ================== CONFIG ==================
+    const WORKER_URL = "https://tetes.kimrosekim69.workers.dev"; // ganti jika perlu
 
     let currentPage = "home";
     let currentPeriod = "24h";
     let currentItems = [];
-    let pageNum = 1;
+    let homePage = null; // null = root monsnode.com/
     let player = null;
     let currentPlaying = null;
 
@@ -308,38 +300,29 @@
         autoplay: false,
         controls: ["play-large", "play", "progress", "current-time", "mute", "volume", "fullscreen"]
       });
-
-      // Cek URL saat pertama kali dibuka
       handleRoute();
     });
 
-    // ===== ROUTING =====
+    // ================== ROUTING ==================
     function handleRoute() {
-      const path = location.pathname;
-      const match = path.match(/\/v\/(\d+)/);
-
+      const match = location.pathname.match(/\/v\/(\d+)/);
       if (match) {
-        const videoId = match[1];
-        openPlayerById(videoId);
+        openPlayerById(match[1]);
       } else {
-        // Home
         showMain();
-        if (currentPage === "home") loadContent();
+        if (currentPage === "home") loadContent(false);
       }
     }
 
     window.addEventListener("popstate", () => {
-      handleRoute();
+      const match = location.pathname.match(/\/v\/(\d+)/);
+      if (match) {
+        openPlayerById(match[1]);
+      } else {
+        showMain();
+        // jangan auto reload agresif saat back dari player
+      }
     });
-
-    function goHome() {
-      history.pushState(null, "", "/");
-      showMain();
-      currentPage = "home";
-      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-      document.querySelector('.nav-btn[data-page="home"]').classList.add("active");
-      loadContent();
-    }
 
     function showMain() {
       document.getElementById("player-view").classList.remove("active");
@@ -347,16 +330,15 @@
       if (player) player.stop();
     }
 
-    // ===== NAV =====
+    // ================== NAV ==================
     document.querySelectorAll(".nav-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         currentPage = btn.dataset.page;
-        pageNum = 1;
         currentItems = [];
+        homePage = null;
 
-        // Kembali ke root URL
         if (location.pathname.includes("/v/")) {
           history.pushState(null, "", "/");
         }
@@ -371,7 +353,7 @@
           document.getElementById("grid").innerHTML = "";
           document.getElementById("loadMoreBtn").style.display = "none";
         } else {
-          loadContent();
+          loadContent(false);
         }
       });
     });
@@ -381,13 +363,12 @@
         document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         currentPeriod = btn.dataset.period;
-        pageNum = 1;
         currentItems = [];
-        loadContent();
+        loadContent(false);
       });
     });
 
-    // ===== SEARCH =====
+    // ================== SEARCH ==================
     const searchInput = document.getElementById("searchInput");
     const searchIcon = document.getElementById("searchIcon");
 
@@ -415,32 +396,58 @@
     function doSearch() {
       if (!searchInput.value.trim()) return;
       currentPage = "search";
-      pageNum = 1;
-      loadContent();
+      currentItems = [];
+      loadContent(false);
     }
 
-    // ===== LOAD =====
+    // ================== LOAD ==================
+    function showSkeletons(count = 12) {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      for (let i = 0; i < count; i++) {
+        const sk = document.createElement("div");
+        sk.className = "skeleton";
+        grid.appendChild(sk);
+      }
+    }
+
+    function showError(msg = "Sedang gangguan, coba lagi nanti") {
+      document.getElementById("grid").innerHTML = `
+        <div class="error-state">
+          ${msg}<br>
+          <small>Silakan coba beberapa saat lagi</small>
+        </div>`;
+      document.getElementById("loadMoreBtn").style.display = "none";
+    }
+
     async function loadContent(append = false) {
       const grid = document.getElementById("grid");
       const loadBtn = document.getElementById("loadMoreBtn");
 
       if (!append) {
-        grid.innerHTML = "";
-        for (let i = 0; i < 12; i++) {
-          const sk = document.createElement("div");
-          sk.className = "skeleton";
-          grid.appendChild(sk);
-        }
+        showSkeletons(12);
         loadBtn.style.display = "none";
       }
 
       try {
         let url = "";
-        if (currentPage === "home") url = `${WORKER_URL}/home?page=${pageNum}`;
-        else if (currentPage === "trending") url = `${WORKER_URL}/trending?period=${currentPeriod}`;
-        else if (currentPage === "surprise") url = `${WORKER_URL}/random`;
-        else if (currentPage === "search") url = `${WORKER_URL}/search?q=${encodeURIComponent(searchInput.value.trim())}`;
-        else if (currentPage === "saved") {
+
+        if (currentPage === "home") {
+          // Home root dulu, load more baru page=1,2,3...
+          if (!append) {
+            homePage = null;
+            url = `${WORKER_URL}/home`;
+          } else {
+            homePage = (homePage === null) ? 1 : homePage + 1;
+            url = `${WORKER_URL}/home?page=${homePage}`;
+          }
+        } else if (currentPage === "trending") {
+          url = `${WORKER_URL}/trending?period=${currentPeriod}`;
+        } else if (currentPage === "surprise") {
+          url = `${WORKER_URL}/random`;
+        } else if (currentPage === "search") {
+          url = `${WORKER_URL}/search?q=${encodeURIComponent(searchInput.value.trim())}`;
+        } else if (currentPage === "saved") {
           const saved = getSaved();
           if (saved.length === 0) {
             grid.innerHTML = `
@@ -451,6 +458,7 @@
             loadBtn.style.display = "none";
             return;
           }
+          currentItems = saved;
           renderGrid(saved, false);
           loadBtn.style.display = "none";
           return;
@@ -458,29 +466,30 @@
 
         const res = await fetch(url);
         const json = await res.json();
-        if (json.status !== "success") throw new Error("Gagal");
+        if (json.status !== "success") throw new Error(json.message || "Gagal memuat");
 
         const newItems = json.data || [];
         currentItems = append ? currentItems.concat(newItems) : newItems;
-
         renderGrid(currentItems, append);
 
         // Load More hanya di Home
-        loadBtn.style.display = (currentPage === "home" && newItems.length >= 10) ? "inline-block" : "none";
-
+        if (currentPage === "home" && newItems.length > 0) {
+          loadBtn.style.display = "inline-block";
+        } else {
+          loadBtn.style.display = "none";
+        }
       } catch (err) {
         console.error(err);
-        if (!append) grid.innerHTML = "";
+        if (!append) showError();
       }
     }
 
     function loadMore() {
       if (currentPage !== "home") return;
-      pageNum++;
       loadContent(true);
     }
 
-    // ===== CARD =====
+    // ================== CARD ==================
     function createCard(item) {
       const card = document.createElement("div");
       card.className = "card";
@@ -503,7 +512,7 @@
 
       card.querySelector(".username").onclick = (e) => {
         e.stopPropagation();
-        loadUser(item.user_id);
+        if (item.user_id) loadUser(item.user_id);
       };
 
       card.querySelector(".like-btn").onclick = (e) => {
@@ -528,7 +537,7 @@
       items.forEach(item => grid.appendChild(createCard(item)));
     }
 
-    // ===== SAVED =====
+    // ================== SAVED ==================
     function getSaved() {
       return JSON.parse(localStorage.getItem("mons_saved") || "[]");
     }
@@ -555,97 +564,85 @@
       updatePlayerLikeButton();
     }
     function removeSave(item) {
-      let list = getSaved().filter(v => v.detail_url !== item.detail_url);
+      const list = getSaved().filter(v => v.detail_url !== item.detail_url);
       saveList(list);
       updatePlayerLikeButton();
     }
 
-    // ===== PLAYER =====
+    // ================== PLAYER ==================
     function getVideoId(detailUrl) {
-      const m = detailUrl.match(/[?&]v=(\d+)/);
+      const m = (detailUrl || "").match(/[?&]v=(\d+)/);
       return m ? m[1] : null;
     }
 
     async function openPlayer(item) {
       currentPlaying = item;
       const videoId = getVideoId(item.detail_url);
-      if (videoId) {
-        history.pushState({ videoId }, "", `/v/${videoId}`);
-      }
+      if (videoId) history.pushState({ videoId }, "", `/v/${videoId}`);
       await loadPlayer(item);
     }
 
     async function openPlayerById(videoId) {
-      const detailUrl = `https://monsnode.com/redirect.php?v=${videoId}`;
-      // Buat object minimal
-      const item = {
-        detail_url: detailUrl,
+      currentPlaying = {
+        detail_url: `https://monsnode.com/redirect.php?v=${videoId}`,
         video_image: "",
         username: "user",
         user_id: ""
       };
-      currentPlaying = item;
-      await loadPlayer(item);
+      await loadPlayer(currentPlaying);
     }
 
     async function loadPlayer(item) {
       try {
-        const res = await fetch(WORKER_URL + "/video?url=" + encodeURIComponent(item.detail_url));
+        const id = getVideoId(item.detail_url);
+        const userId = item.user_id || "";
+        let api = `${WORKER_URL}/play?id=${encodeURIComponent(id)}`;
+        if (userId) api += `&user_id=${encodeURIComponent(userId)}`;
+
+        const res = await fetch(api);
         const json = await res.json();
-        if (json.status !== "success") throw new Error("Gagal");
+        if (json.status !== "success") throw new Error(json.message || "Gagal");
 
         player.source = {
           type: "video",
           sources: [{ src: json.video_url, type: "video/mp4" }]
         };
 
-        // Like / Dislike / Share
         updatePlayerLikeButton();
 
         document.getElementById("btnLike").onclick = () => {
           toggleSave(currentPlaying);
           updatePlayerLikeButton();
         };
-
         document.getElementById("btnDislike").onclick = () => {
           removeSave(currentPlaying);
           updatePlayerLikeButton();
         };
-
         document.getElementById("btnShare").onclick = () => {
-          const videoId = getVideoId(item.detail_url);
-          const shareUrl = `${location.origin}/v/${videoId}`;
+          const shareUrl = `${location.origin}/v/${id}`;
           if (navigator.share) {
-            navigator.share({
-              title: "MonsPlay Video",
-              url: shareUrl
-            });
+            navigator.share({ title: "MonsPlay", url: shareUrl }).catch(() => {});
           } else {
             navigator.clipboard.writeText(shareUrl);
-            alert("Link disalin: " + shareUrl);
+            alert("Link disalin");
           }
         };
 
-        // Related
+        // Related dari response /play
         const relatedGrid = document.getElementById("relatedGrid");
         relatedGrid.innerHTML = "";
-        if (item.user_id) {
-          try {
-            const r = await fetch(WORKER_URL + "/user?id=" + item.user_id);
-            const j = await r.json();
-            if (j.status === "success") {
-              j.data.slice(0, 12).forEach(rel => relatedGrid.appendChild(createCard(rel)));
-            }
-          } catch (e) {}
-        }
+        (json.related || []).forEach(rel => {
+          relatedGrid.appendChild(createCard(rel));
+        });
 
         document.getElementById("main-view").classList.add("hidden");
         document.getElementById("player-view").classList.add("active");
         window.scrollTo(0, 0);
       } catch (err) {
         console.error(err);
-        alert("Gagal memuat video");
-        goHome();
+        alert("Sedang gangguan, coba lagi nanti");
+        history.pushState(null, "", "/");
+        showMain();
       }
     }
 
@@ -664,26 +661,20 @@
 
     async function loadUser(userId) {
       currentPage = "user";
-      history.pushState(null, "", "/");
+      if (location.pathname.includes("/v/")) history.pushState(null, "", "/");
       showMain();
-      const grid = document.getElementById("grid");
-      grid.innerHTML = "";
-      for (let i = 0; i < 8; i++) {
-        const sk = document.createElement("div");
-        sk.className = "skeleton";
-        grid.appendChild(sk);
-      }
-      try {
-        const res = await fetch(WORKER_URL + "/user?id=" + userId);
-        const json = await res.json();
-        currentItems = json.data || [];
-        renderGrid(currentItems);
-        document.getElementById("loadMoreBtn").style.display = "none";
-      } catch (e) {}
-    }
+      showSkeletons(8);
+      document.getElementById("loadMoreBtn").style.display = "none";
 
-    function closePlayer() {
-      // tidak dipakai lagi (tidak ada tombol back)
+      try {
+        const res = await fetch(`${WORKER_URL}/user?id=${encodeURIComponent(userId)}`);
+        const json = await res.json();
+        if (json.status !== "success") throw new Error("Gagal");
+        currentItems = json.data || [];
+        renderGrid(currentItems, false);
+      } catch (e) {
+        showError();
+      }
     }
   </script>
 </body>
